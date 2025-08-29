@@ -37,34 +37,22 @@ def process_links(links_str):
     if not links_str or links_str.lower().startswith('no links found'):
         return []
     
-    processed_links = []
+    # Use regex to extract all URLs from the text
+    url_pattern = r'https?://[^\s"\'<>\])\n]*'
+    urls = re.findall(url_pattern, links_str)
     
-    # Try different delimiters
-    potential_links = []
-    for delimiter in [',', ';', '\n', '|', '\t']:
-        if delimiter in links_str:
-            potential_links = [link.strip() for link in links_str.split(delimiter)]
-            break
+    # Clean and deduplicate
+    clean_urls = []
+    seen = set()
     
-    if not potential_links:  # Single link
-        potential_links = [links_str]
+    for url in urls:
+        # Remove trailing punctuation
+        url = re.sub(r'[.,;)}\]]+$', '', url)
+        if url and url not in seen and len(url) > 10:
+            clean_urls.append(url)
+            seen.add(url)
     
-    # Clean and validate each link
-    for link in potential_links:
-        link = link.strip()
-        if link and len(link) > 10:
-            # Add protocol if missing
-            if not link.startswith(('http://', 'https://')):
-                if link.startswith('www.'):
-                    link = 'https://' + link
-                elif '.' in link and not link.startswith('no '):
-                    link = 'https://' + link
-            
-            # Validate it looks like a URL
-            if any(domain in link for domain in ['http', 'www.', '.com', '.org', '.net', '.in']):
-                processed_links.append(link)
-    
-    return processed_links
+    return clean_urls
 
 def categorize_company_news(extracted_text):
     """Determine if company has significant news"""
@@ -157,8 +145,8 @@ def get_company_news(date):
         if not target_file:
             return jsonify({'error': 'No data found for this date'}), 404
         
-        # Read and process CSV
-        df = pd.read_csv(target_file)
+        # Read and process CSV with proper multiline handling
+        df = pd.read_csv(target_file, quotechar='"', skipinitialspace=True, on_bad_lines='skip')
         
         # Clean column names (remove whitespace)
         df.columns = df.columns.str.strip()
@@ -168,19 +156,26 @@ def get_company_news(date):
         
         for _, row in df.iterrows():
             company_name = str(row['Company_Name']).strip()
-            extracted_text = row['Extracted_Text'] if 'Extracted_Text' in row else ''
-            extracted_links = row['Extracted_Links'] if 'Extracted_Links' in row else ''
+            
+            # Skip invalid company names (corrupted data)
+            if (len(company_name) > 50 or 
+                pd.isna(row['Company_Name']) or
+                company_name.startswith(('=======', '<<<<<<<', '>>>>>>>'))):
+                continue
+            
+            extracted_text = str(row['Extracted_Text']).strip() if 'Extracted_Text' in row and pd.notna(row['Extracted_Text']) else ''
+            extracted_links = str(row['Extracted_Links']).strip() if 'Extracted_Links' in row and pd.notna(row['Extracted_Links']) else ''
             
             news_category = categorize_company_news(extracted_text)
             
-            # Keep the exact links as they are in CSV
-            raw_links_text = str(extracted_links) if extracted_links else ''
+            # Process links properly
+            processed_links = process_links(extracted_links)
             
             company_data = {
                 'name': company_name,
-                'text': str(extracted_text) if extracted_text else '',
-                'links_raw': raw_links_text,  # Exact text from CSV
-                'has_content': len(str(extracted_text).strip()) > 0
+                'text': extracted_text,
+                'links': processed_links,
+                'has_content': len(extracted_text) > 0
             }
             
             if news_category == "has_news":

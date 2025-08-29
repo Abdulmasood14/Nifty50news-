@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Company News Dashboard - Direct CSV</title>
+    <title>Company News Dashboard</title>
     <style>
         * {
             margin: 0;
@@ -260,6 +260,7 @@
             color: rgba(255,255,255,0.9);
             font-size: 16px;
             margin-bottom: 30px;
+            white-space: pre-wrap;
         }
 
         .news-links {
@@ -304,6 +305,22 @@
             font-weight: 500;
             border: 1px solid rgba(248, 113, 113, 0.3);
         }
+
+        @media (max-width: 768px) {
+            .container {
+                grid-template-columns: 1fr;
+                gap: 15px;
+            }
+            
+            .sidebar {
+                order: 2;
+            }
+            
+            .main-content {
+                order: 1;
+                min-height: 400px;
+            }
+        }
     </style>
 </head>
 <body>
@@ -315,8 +332,6 @@
                 <div class="date-selector">
                     <select id="dateSelect">
                         <option value="">Select a date...</option>
-                        <option value="2025-08-22">Friday, August 22, 2025</option>
-                        <option value="2025-08-23">Saturday, August 23, 2025</option>
                     </select>
                 </div>
             </div>
@@ -360,7 +375,7 @@
                 <div class="date-badge" id="dateBadge"></div>
                 <div class="news-content" id="newsContent"></div>
                 <div class="news-links" id="newsLinks" style="display: none;">
-                    <div class="links-header">📎 Source Links</div>
+                    <div class="links-header">🔗 Source Links</div>
                     <div id="linksList"></div>
                 </div>
             </div>
@@ -368,179 +383,88 @@
     </div>
 
     <script>
-        class SimpleCSVDashboard {
+        class CompanyNewsDashboard {
             constructor() {
                 this.currentDate = null;
-                this.csvData = new Map();
                 this.init();
             }
 
-            init() {
+            async init() {
+                await this.loadAvailableDates();
                 this.setupEventListeners();
+            }
+
+            async loadAvailableDates() {
+                try {
+                    const response = await fetch('/api/available-dates');
+                    if (!response.ok) throw new Error('Failed to load dates');
+                    
+                    const dates = await response.json();
+                    
+                    const dateSelect = document.getElementById('dateSelect');
+                    dates.forEach(dateInfo => {
+                        const option = document.createElement('option');
+                        option.value = dateInfo.date;
+                        option.textContent = dateInfo.display_date;
+                        dateSelect.appendChild(option);
+                    });
+                } catch (error) {
+                    console.error('Error loading dates:', error);
+                    this.showError('Failed to load available dates. Please refresh the page.');
+                }
             }
 
             setupEventListeners() {
                 document.getElementById('dateSelect').addEventListener('change', async (e) => {
                     const selectedDate = e.target.value;
                     if (selectedDate) {
-                        await this.loadCSVData(selectedDate);
+                        await this.loadCompanyData(selectedDate);
                     } else {
                         this.showWelcomeScreen();
                     }
                 });
             }
 
-            async loadCSVData(date) {
+            async loadCompanyData(date) {
                 this.showLoading();
                 this.currentDate = date;
 
                 try {
-                    // Convert date format for CSV filename
-                    const [year, month, day] = date.split('-');
-                    const csvFilename = `${parseInt(day)}.${parseInt(month)}.${year}.csv`;
-                    
-                    // Fetch CSV file
-                    const response = await fetch(`scrapped_output/${csvFilename}`);
+                    const response = await fetch(`/api/company-news/${date}`);
                     
                     if (!response.ok) {
-                        throw new Error(`CSV file not found: ${csvFilename}`);
+                        throw new Error(`Failed to load data: ${response.status}`);
                     }
 
-                    const csvText = await response.text();
-                    const parsedData = this.parseCSV(csvText);
-                    
-                    this.csvData.set(date, parsedData);
-                    this.displayCompanies(parsedData);
+                    const data = await response.json();
+                    this.displayCompanies(data);
                     this.showWelcomeScreen();
 
                 } catch (error) {
-                    console.error('Error loading CSV:', error);
+                    console.error('Error loading company data:', error);
                     this.showError(`Failed to load data for ${date}: ${error.message}`);
                 }
             }
 
-            parseCSV(csvText) {
-                const lines = csvText.split('\n');
-                if (lines.length < 2) return { companiesWithNews: [], companiesNoNews: [] };
-
-                // Get headers
-                const headers = lines[0].split(',').map(h => h.trim().replace(/"/g, ''));
-                
-                const companiesWithNews = [];
-                const companiesNoNews = [];
-
-                for (let i = 1; i < lines.length; i++) {
-                    const line = lines[i].trim();
-                    if (!line) continue;
-
-                    // Simple CSV parsing (handles basic quotes)
-                    const values = this.parseCSVLine(line);
-                    if (values.length < headers.length) continue;
-
-                    const companyName = values[0]?.trim().replace(/"/g, '') || '';
-                    const extractedLinks = values[1]?.trim().replace(/"/g, '') || '';
-                    const extractedText = values[2]?.trim().replace(/"/g, '') || '';
-
-                    // Skip invalid company names
-                    if (!companyName || 
-                        companyName.length > 50 ||
-                        companyName.includes('=======') ||
-                        companyName.includes('<<<<<<<') ||
-                        companyName.includes('>>>>>>>')) {
-                        continue;
-                    }
-
-                    const hasNews = this.hasSignificantNews(extractedText);
-                    
-                    const companyData = {
-                        name: companyName,
-                        text: extractedText,
-                        links: extractedLinks
-                    };
-
-                    if (hasNews) {
-                        companiesWithNews.push(companyData);
-                    } else {
-                        companiesNoNews.push(companyData);
-                    }
-                }
-
-                // Sort alphabetically
-                companiesWithNews.sort((a, b) => a.name.localeCompare(b.name));
-                companiesNoNews.sort((a, b) => a.name.localeCompare(b.name));
-
-                return { companiesWithNews, companiesNoNews };
-            }
-
-            parseCSVLine(line) {
-                const result = [];
-                let current = '';
-                let inQuotes = false;
-                let i = 0;
-
-                while (i < line.length) {
-                    const char = line[i];
-                    
-                    if (char === '"') {
-                        if (inQuotes && line[i + 1] === '"') {
-                            // Escaped quote
-                            current += '"';
-                            i += 2;
-                        } else {
-                            // Toggle quote state
-                            inQuotes = !inQuotes;
-                            i++;
-                        }
-                    } else if (char === ',' && !inQuotes) {
-                        result.push(current);
-                        current = '';
-                        i++;
-                    } else {
-                        current += char;
-                        i++;
-                    }
-                }
-                
-                result.push(current);
-                return result;
-            }
-
-            hasSignificantNews(text) {
-                if (!text || text.length < 50) return false;
-                
-                const lowerText = text.toLowerCase();
-                const noNewsPatterns = [
-                    'no significant corporate developments',
-                    'no significant news',
-                    'no news',
-                    'no updates',
-                    'no recent news',
-                    'no major news',
-                    'nothing significant'
-                ];
-
-                return !noNewsPatterns.some(pattern => lowerText.includes(pattern));
-            }
-
             displayCompanies(data) {
-                const { companiesWithNews, companiesNoNews } = data;
+                const { companies_with_news, companies_no_news } = data;
 
                 // Show/hide sections
                 const withNewsSection = document.getElementById('companiesWithNews');
                 const noNewsSection = document.getElementById('companiesNoNews');
 
-                if (companiesWithNews.length > 0) {
+                if (companies_with_news.length > 0) {
                     withNewsSection.style.display = 'block';
-                    this.renderCompanyList('newsCompanyList', companiesWithNews, 'has-news');
-                    document.getElementById('newsCount').textContent = companiesWithNews.length;
+                    this.renderCompanyList('newsCompanyList', companies_with_news, 'has-news');
+                    document.getElementById('newsCount').textContent = companies_with_news.length;
                 } else {
                     withNewsSection.style.display = 'none';
                 }
 
-                if (companiesNoNews.length > 0) {
+                if (companies_no_news.length > 0) {
                     noNewsSection.style.display = 'block';
-                    this.renderCompanyList('noNewsCompanyList', companiesNoNews, 'no-news');
-                    document.getElementById('noNewsCount').textContent = companiesNoNews.length;
+                    this.renderCompanyList('noNewsCompanyList', companies_no_news, 'no-news');
+                    document.getElementById('noNewsCount').textContent = companies_no_news.length;
                 } else {
                     noNewsSection.style.display = 'none';
                 }
@@ -592,8 +516,8 @@
 
                 // Set news content
                 const newsContent = document.getElementById('newsContent');
-                if (company.text && company.text.length > 10) {
-                    newsContent.innerHTML = this.formatNewsText(company.text);
+                if (company.text && company.text.trim().length > 10) {
+                    newsContent.textContent = company.text;
                 } else {
                     newsContent.innerHTML = '<div style="color: #f87171; font-style: italic;">No significant news available for this company.</div>';
                 }
@@ -603,38 +527,21 @@
                 const linksList = document.getElementById('linksList');
                 linksList.innerHTML = '';
 
-                if (company.links && !company.links.toLowerCase().includes('no links found')) {
-                    const urls = this.extractUrls(company.links);
-                    if (urls.length > 0) {
-                        urls.forEach((url, index) => {
-                            const link = document.createElement('a');
-                            link.href = url;
-                            link.target = '_blank';
-                            link.className = 'news-link';
-                            link.textContent = `${index + 1}. ${url}`;
-                            linksList.appendChild(link);
-                        });
-                        linksContainer.style.display = 'block';
-                    } else {
-                        linksContainer.style.display = 'none';
-                    }
+                if (company.links && company.links.length > 0) {
+                    company.links.forEach((url, index) => {
+                        const link = document.createElement('a');
+                        link.href = url;
+                        link.target = '_blank';
+                        link.className = 'news-link';
+                        link.textContent = `${index + 1}. ${url}`;
+                        linksList.appendChild(link);
+                    });
+                    linksContainer.style.display = 'block';
                 } else {
                     linksContainer.style.display = 'none';
                 }
 
                 this.showNewsDetail();
-            }
-
-            formatNewsText(text) {
-                // Simple text formatting - convert to paragraphs
-                const paragraphs = text.split(/\n\s*\n/).filter(p => p.trim());
-                return paragraphs.map(p => `<p style="margin-bottom: 15px;">${p.trim()}</p>`).join('');
-            }
-
-            extractUrls(text) {
-                const urlPattern = /https?:\/\/[^\s"'<>\])]*/g;
-                const matches = text.match(urlPattern) || [];
-                return [...new Set(matches)]; // Remove duplicates
             }
 
             showWelcomeScreen() {
@@ -669,7 +576,7 @@
 
         // Initialize the dashboard when the page loads
         document.addEventListener('DOMContentLoaded', () => {
-            new SimpleCSVDashboard();
+            new CompanyNewsDashboard();
         });
     </script>
 </body>
