@@ -726,10 +726,15 @@
             setupEventListeners() {
                 document.getElementById('dateSelect').addEventListener('change', async (e) => {
                     const selectedDate = e.target.value;
+                    console.log('Date selected:', selectedDate);
+                    console.log('Available dates:', this.availableDates);
+                    
                     if (selectedDate) {
-                        if (this.availableDates.includes(selectedDate)) {
+                        if (this.availableDates && this.availableDates.includes(selectedDate)) {
+                            console.log('Loading data for date:', selectedDate);
                             await this.loadCompanyData(selectedDate);
                         } else {
+                            console.log('Date not available, showing error');
                             this.showError('No data available for the selected date. Please choose a different date.');
                         }
                     } else {
@@ -880,7 +885,8 @@
                 this.showLoading();
 
                 try {
-                    const safeCompanyName = company.name.replace('/', '_').replace('\\', '_');
+                    // Create a safe filename by removing/replacing problematic characters
+                    const safeCompanyName = company.name.replace(/[<>:"/\\|?*]/g, '_').substring(0, 50);
                     const response = await fetch(`/api/company-details-${this.currentDate}-${safeCompanyName}.json`);
                     
                     if (!response.ok) {

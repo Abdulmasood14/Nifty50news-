@@ -150,24 +150,37 @@ def main():
         company_details = {}
         
         for _, row in df.iterrows():
+            # Ensure we get the actual company name, not some random text
             company_name = str(row['Company_Name']).strip()
+            
+            # Skip if this looks like corrupted data (not a proper company name)
+            if (len(company_name) > 50 or 
+                company_name.startswith('=======') or 
+                company_name.startswith('<<<<<<<') or
+                company_name.startswith('>>>>>>>') or
+                '.' in company_name[:10]):  # Skip if starts with numbers/dates
+                continue
+                
             extracted_text = row['Extracted_Text'] if 'Extracted_Text' in row else ''
             extracted_links = row['Extracted_Links'] if 'Extracted_Links' in row else ''
+            
+            # Clean up the extracted text
+            extracted_text = str(extracted_text).strip() if extracted_text else ''
             
             news_category = categorize_company_news(extracted_text)
             processed_links = process_links(str(extracted_links))
             
             company_data = {
                 'name': company_name,
-                'text': str(extracted_text) if extracted_text else '',
+                'text': extracted_text,
                 'links_raw': str(extracted_links) if extracted_links else '',
-                'has_content': len(str(extracted_text).strip()) > 0
+                'has_content': len(extracted_text) > 0
             }
             
-            # Detailed company data
+            # Detailed company data with proper company name
             company_details[company_name] = {
                 'company_name': company_name,
-                'extracted_text': str(extracted_text) if extracted_text else '',
+                'extracted_text': extracted_text,
                 'links_raw': str(extracted_links) if extracted_links else '',
                 'processed_links': processed_links,
                 'date': parsed_date
