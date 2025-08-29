@@ -1,0 +1,60 @@
+name: Update Daily CSV Data
+
+on:
+  schedule:
+    # Run daily at 6 AM UTC (adjust timezone as needed)
+    - cron: '0 6 * * *'
+  workflow_dispatch: # Allow manual triggering
+
+jobs:
+  update-csv:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.9'
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install requests pandas
+    
+    - name: Create scrapped_output directory
+      run: mkdir -p scrapped_output
+    
+    # Option 1: If you have a scraping script
+    # - name: Run scraping script
+    #   run: python scrape_daily_data.py
+    
+    # Option 2: Download from external source (example)
+    # - name: Download CSV from external source
+    #   run: |
+    #     TODAY=$(date +"%d.%m.%Y")
+    #     curl -o "scrapped_output/${TODAY}.csv" "https://your-data-source.com/daily-data.csv"
+    
+    # Option 3: Manual upload trigger (you'll manually commit CSV files)
+    - name: Check for new CSV files
+      run: |
+        if [ -n "$(git status --porcelain scrapped_output/)" ]; then
+          echo "NEW_DATA=true" >> $GITHUB_ENV
+        else
+          echo "NEW_DATA=false" >> $GITHUB_ENV
+        fi
+    
+    - name: Commit and push if new data exists
+      if: env.NEW_DATA == 'true'
+      run: |
+        git config --local user.email "action@github.com"
+        git config --local user.name "GitHub Action"
+        git add scrapped_output/
+        git commit -m "Update daily CSV data - $(date +%Y-%m-%d)"
+        git push
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

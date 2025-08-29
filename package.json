@@ -1,0 +1,25 @@
+{
+  "name": "company-news-dashboard",
+  "version": "1.0.0",
+  "description": "Company News Dashboard with daily CSV processing",
+  "main": "index.html",
+  "scripts": {
+    "build": "python build.py",
+    "start": "python build.py",
+    "dev": "python build.py"
+  },
+  "dependencies": {},
+  "devDependencies": {},
+  "engines": {
+    "python": ">=3.8"
+  },
+  "keywords": [
+    "dashboard",
+    "news",
+    "company",
+    "csv",
+    "static"
+  ],
+  "author": "Your Name",
+  "license": "MIT"
+}

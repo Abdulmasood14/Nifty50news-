@@ -1,0 +1,7 @@
+# Redirect API calls to static JSON files (no functions needed)
+/api/available-dates /api/available-dates.json 200
+/api/company-news/* /api/company-news-:splat.json 200
+/api/company-details/*/* /api/company-details-:splat.json 200
+
+# SPA fallback
+/* /index.html 200

@@ -1,0 +1,1028 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Company News Dashboard</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap');
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: #0a0a0a;
+            background-image: 
+                radial-gradient(circle at 20% 80%, rgba(120, 119, 198, 0.3) 0%, transparent 50%),
+                radial-gradient(circle at 80% 20%, rgba(255, 119, 198, 0.3) 0%, transparent 50%),
+                radial-gradient(circle at 40% 40%, rgba(120, 219, 255, 0.2) 0%, transparent 50%);
+            min-height: 100vh;
+            color: #ffffff;
+            font-weight: 400;
+            letter-spacing: -0.01em;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+            display: grid;
+            grid-template-columns: 350px 1fr;
+            gap: 20px;
+            min-height: 100vh;
+        }
+
+        /* Left Sidebar */
+        .sidebar {
+            background: rgba(255, 255, 255, 0.03);
+            backdrop-filter: blur(30px);
+            border: 2px solid;
+            border-image: linear-gradient(145deg, rgba(255,255,255,0.2), rgba(255,255,255,0.05)) 1;
+            border-radius: 24px;
+            box-shadow: 
+                0 25px 50px rgba(0,0,0,0.5),
+                inset 0 1px 0 rgba(255,255,255,0.1);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .sidebar-header {
+            background: linear-gradient(145deg, #ff0080 0%, #7928ca 50%, #4c1d95 100%);
+            padding: 28px 24px 20px 24px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .sidebar-header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(45deg, rgba(255,255,255,0.15) 0%, transparent 50%);
+            pointer-events: none;
+            animation: shimmer 3s infinite;
+        }
+
+        @keyframes shimmer {
+            0% { transform: translateX(-100%); }
+            100% { transform: translateX(100%); }
+        }
+
+        .sidebar-header h2 {
+            font-size: 22px;
+            font-weight: 900;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            text-shadow: 0 4px 20px rgba(0,0,0,0.3);
+            z-index: 2;
+            position: relative;
+        }
+
+        .search-container {
+            background: rgba(255,255,255,0.15);
+            border-radius: 12px;
+            padding: 16px;
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255,255,255,0.2);
+            z-index: 2;
+            position: relative;
+        }
+
+        #companySearch {
+            width: 100%;
+            padding: 12px 16px;
+            border: none;
+            border-radius: 12px;
+            background: rgba(255,255,255,0.95);
+            color: #0f172a;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: text;
+            transition: all 0.3s ease;
+            box-shadow: 
+                0 4px 15px rgba(0,0,0,0.1),
+                inset 0 1px 0 rgba(255,255,255,0.8);
+        }
+
+        #companySearch:focus {
+            outline: none;
+            background: #ffffff;
+            box-shadow: 
+                0 0 0 3px rgba(255, 0, 128, 0.2),
+                0 4px 15px rgba(0,0,0,0.15);
+        }
+
+        #companySearch::placeholder {
+            color: rgba(15, 23, 42, 0.6);
+            font-weight: 400;
+        }
+
+        .company-lists {
+            flex: 1;
+            overflow-y: auto;
+            max-height: calc(100vh - 200px);
+        }
+
+        .news-section {
+            margin-bottom: 30px;
+        }
+
+        .section-header {
+            padding: 18px 24px;
+            font-weight: 700;
+            font-size: 13px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            background: rgba(255,255,255,0.02);
+        }
+
+        .no-news-header {
+            color: #f87171;
+        }
+
+        .has-news-header {
+            color: #34d399;
+        }
+
+        .company-count {
+            background: rgba(255,255,255,0.15);
+            color: rgba(255,255,255,0.9);
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: 600;
+            backdrop-filter: blur(10px);
+        }
+
+        .company-item {
+            padding: 16px 24px;
+            border-bottom: 1px solid rgba(255,255,255,0.08);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .company-item::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: 0;
+            background: linear-gradient(90deg, rgba(99, 102, 241, 0.1) 0%, transparent 100%);
+            transition: width 0.3s ease;
+        }
+
+        .company-item:hover {
+            background: rgba(255,255,255,0.08);
+            transform: translateX(4px);
+        }
+
+        .company-item:hover::before {
+            width: 100%;
+        }
+
+        .company-item.selected {
+            background: rgba(99, 102, 241, 0.15);
+            border-left: 3px solid #6366f1;
+            transform: translateX(4px);
+        }
+
+        .company-item.selected::before {
+            width: 100%;
+        }
+
+        .status-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            flex-shrink: 0;
+            box-shadow: 0 0 10px rgba(255,255,255,0.3);
+            position: relative;
+        }
+
+        .status-dot::after {
+            content: '';
+            position: absolute;
+            top: -2px;
+            left: -2px;
+            right: -2px;
+            bottom: -2px;
+            border-radius: 50%;
+            background: inherit;
+            opacity: 0.3;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); opacity: 0.3; }
+            50% { transform: scale(1.2); opacity: 0.1; }
+        }
+
+        .dot-red {
+            background: #f87171;
+            box-shadow: 0 0 15px rgba(248, 113, 113, 0.4);
+        }
+
+        .dot-green {
+            background: #34d399;
+            box-shadow: 0 0 15px rgba(52, 211, 153, 0.4);
+        }
+
+        .company-name {
+            font-size: 14px;
+            font-weight: 500;
+            color: rgba(255,255,255,0.95);
+            letter-spacing: -0.01em;
+        }
+
+        /* Main Content */
+        .main-content {
+            background: rgba(15, 15, 15, 0.7);
+            backdrop-filter: blur(40px);
+            border: 2px solid;
+            border-image: linear-gradient(145deg, rgba(255,255,255,0.2), rgba(255,255,255,0.05)) 1;
+            border-radius: 24px;
+            box-shadow: 
+                0 25px 50px rgba(0,0,0,0.5),
+                inset 0 1px 0 rgba(255,255,255,0.1);
+            display: flex;
+            flex-direction: column;
+            min-height: 500px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .main-content::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(145deg, rgba(255,0,128,0.05) 0%, rgba(121,40,202,0.05) 50%, transparent 100%);
+            pointer-events: none;
+        }
+
+        .main-header {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            z-index: 10;
+            background: rgba(255,255,255,0.1);
+            backdrop-filter: blur(20px);
+            border-radius: 12px;
+            padding: 12px;
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+
+        .date-picker-container {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .date-label {
+            font-size: 12px;
+            font-weight: 600;
+            color: rgba(255,255,255,0.8);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        #dateSelect {
+            padding: 8px 12px;
+            border: none;
+            border-radius: 8px;
+            background: rgba(255,255,255,0.95);
+            color: #0f172a;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+
+        #dateSelect:hover {
+            background: #ffffff;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+        }
+
+        #dateSelect:focus {
+            outline: none;
+            background: #ffffff;
+            box-shadow: 0 0 0 2px rgba(255, 0, 128, 0.3);
+        }
+
+        /* Calendar styling */
+        #dateSelect::-webkit-calendar-picker-indicator {
+            background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>') no-repeat center;
+            background-size: 14px 14px;
+            cursor: pointer;
+            opacity: 0.8;
+            width: 16px;
+            height: 16px;
+        }
+
+        #dateSelect::-webkit-calendar-picker-indicator:hover {
+            opacity: 1;
+        }
+
+        .welcome-screen {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            color: rgba(255,255,255,0.7);
+            text-align: center;
+            padding: 60px 40px;
+        }
+
+        .chart-icon {
+            width: 100px;
+            height: 100px;
+            background: linear-gradient(135deg, #34d399, #3b82f6, #8b5cf6);
+            border-radius: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 30px;
+            position: relative;
+            box-shadow: 0 10px 30px rgba(139, 92, 246, 0.3);
+            animation: float 6s ease-in-out infinite;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0px) rotate(0deg); }
+            50% { transform: translateY(-10px) rotate(1deg); }
+        }
+
+        .chart-bars {
+            display: flex;
+            gap: 6px;
+            align-items: end;
+        }
+
+        .bar {
+            background: rgba(255,255,255,0.9);
+            border-radius: 3px;
+            animation: grow 2s ease-in-out infinite;
+        }
+
+        .bar1 { width: 8px; height: 25px; animation-delay: 0s; }
+        .bar2 { width: 8px; height: 35px; animation-delay: 0.2s; }
+        .bar3 { width: 8px; height: 20px; animation-delay: 0.4s; }
+        .bar4 { width: 8px; height: 30px; animation-delay: 0.6s; }
+
+        @keyframes grow {
+            0%, 100% { transform: scaleY(1); }
+            50% { transform: scaleY(1.2); }
+        }
+
+        .welcome-title {
+            font-size: 32px;
+            font-weight: 800;
+            background: linear-gradient(135deg, #ffffff 0%, #e2e8f0 100%);
+            background-clip: text;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 12px;
+            letter-spacing: -0.02em;
+        }
+
+        .welcome-subtitle {
+            font-size: 18px;
+            font-weight: 400;
+            color: rgba(255,255,255,0.8);
+            line-height: 1.6;
+        }
+
+        .news-detail {
+            padding: 40px;
+            padding-top: 80px;
+            height: 100%;
+            overflow-y: auto;
+        }
+
+        .detail-header {
+            margin-bottom: 30px;
+            padding-bottom: 24px;
+            border-bottom: 2px solid rgba(255,255,255,0.1);
+        }
+
+        .company-title {
+            font-size: 28px;
+            font-weight: 800;
+            background: linear-gradient(135deg, #ffffff 0%, #e2e8f0 100%);
+            background-clip: text;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 8px;
+            letter-spacing: -0.02em;
+        }
+
+        .date-badge {
+            display: inline-block;
+            background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 25px;
+            font-size: 13px;
+            font-weight: 600;
+            box-shadow: 0 4px 15px rgba(99, 102, 241, 0.3);
+        }
+
+        .news-content {
+            line-height: 1.7;
+            color: rgba(255,255,255,0.9);
+            font-size: 16px;
+            font-weight: 400;
+        }
+
+        .news-content ul {
+            list-style: none;
+            padding-left: 0;
+            margin: 0;
+        }
+
+        .news-content li {
+            position: relative;
+            padding-left: 20px;
+            margin-bottom: 12px;
+            line-height: 1.6;
+        }
+
+        .news-content li:before {
+            content: '•';
+            position: absolute;
+            left: 0;
+            color: #6366f1;
+            font-weight: bold;
+            font-size: 16px;
+        }
+
+        .no-news-message {
+            background: linear-gradient(135deg, rgba(248, 113, 113, 0.1) 0%, rgba(239, 68, 68, 0.1) 100%);
+            border: 1px solid rgba(248, 113, 113, 0.3);
+            color: #fca5a5;
+            padding: 20px;
+            border-radius: 12px;
+            text-align: center;
+            font-weight: 500;
+            backdrop-filter: blur(10px);
+        }
+
+        .news-links {
+            margin-top: 24px;
+            padding-top: 24px;
+            border-top: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .links-toggle {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+            padding: 12px 0;
+            color: rgba(255,255,255,0.8);
+            font-weight: 600;
+            font-size: 15px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            transition: color 0.3s ease;
+        }
+
+        .links-toggle:hover {
+            color: rgba(255,255,255,1);
+        }
+
+        .toggle-arrow {
+            transition: transform 0.3s ease;
+            font-size: 12px;
+        }
+
+        .toggle-arrow.expanded {
+            transform: rotate(90deg);
+        }
+
+        .links-content {
+            display: none;
+            animation: slideDown 0.3s ease;
+        }
+
+        .links-content.show {
+            display: block;
+        }
+
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .news-link {
+            display: block;
+            color: #60a5fa;
+            text-decoration: none;
+            font-size: 13px;
+            margin-bottom: 8px;
+            padding: 8px 12px;
+            background: rgba(96, 165, 250, 0.1);
+            border-radius: 8px;
+            border-left: 3px solid #60a5fa;
+            transition: all 0.3s ease;
+            word-break: break-all;
+        }
+
+        .news-link:hover {
+            color: #93c5fd;
+            background: rgba(96, 165, 250, 0.2);
+            transform: translateX(4px);
+        }
+
+        .loading {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 200px;
+            color: rgba(255,255,255,0.8);
+            font-size: 16px;
+            font-weight: 500;
+        }
+
+        .error {
+            background: linear-gradient(135deg, rgba(248, 113, 113, 0.1) 0%, rgba(239, 68, 68, 0.1) 100%);
+            color: #fca5a5;
+            padding: 24px;
+            border-radius: 12px;
+            margin: 24px;
+            text-align: center;
+            font-weight: 500;
+            border: 1px solid rgba(248, 113, 113, 0.3);
+            backdrop-filter: blur(10px);
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                grid-template-columns: 1fr;
+                gap: 15px;
+            }
+            
+            .sidebar {
+                order: 2;
+            }
+            
+            .main-content {
+                order: 1;
+                min-height: 400px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Left Sidebar -->
+        <div class="sidebar">
+            <!-- Header with Search -->
+            <div class="sidebar-header">
+                <h2> Company News</h2>
+                <div class="search-container">
+                    <input type="text" id="companySearch" placeholder="Search companies...">
+                </div>
+            </div>
+
+            <!-- Company Lists -->
+            <div class="company-lists">
+                <div id="companiesWithNews" class="news-section" style="display: none;">
+                    <div class="section-header has-news-header">
+                        <span>✅ COMPANIES WITH NEWS</span>
+                        <span class="company-count" id="newsCount">0</span>
+                    </div>
+                    <div id="newsCompanyList"></div>
+                </div>
+
+                <div id="companiesNoNews" class="news-section" style="display: none;">
+                    <div class="section-header no-news-header">
+                        <span>📰 NO SIGNIFICANT NEWS</span>
+                        <span class="company-count" id="noNewsCount">0</span>
+                    </div>
+                    <div id="noNewsCompanyList"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="main-content">
+            <!-- Date Picker in Top Right -->
+            <div class="main-header">
+                <div class="date-picker-container">
+                    <span class="date-label">DATE:</span>
+                    <input type="date" id="dateSelect" />
+                </div>
+            </div>
+
+            <div id="welcomeScreen" class="welcome-screen">
+                <div class="chart-icon">
+                    <div class="chart-bars">
+                        <div class="bar bar1"></div>
+                        <div class="bar bar2"></div>
+                        <div class="bar bar3"></div>
+                        <div class="bar bar4"></div>
+                    </div>
+                </div>
+                <h1 class="welcome-title">Welcome to Company News Dashboard</h1>
+                <p class="welcome-subtitle">Select a date from the calendar and choose a company to view its news and updates</p>
+            </div>
+
+            <div id="loadingScreen" class="loading" style="display: none;">
+                <p>Loading company data...</p>
+            </div>
+
+            <div id="errorScreen" class="error" style="display: none;">
+                <p id="errorMessage"></p>
+            </div>
+
+            <div id="newsDetail" class="news-detail" style="display: none;">
+                <div class="detail-header">
+                    <h1 class="company-title" id="companyTitle"></h1>
+                    <span class="date-badge" id="dateBadge"></span>
+                </div>
+                
+                <div id="newsContent" class="news-content"></div>
+                
+                <div id="newsLinks" class="news-links" style="display: none;">
+                    <div class="links-toggle" id="linksToggle">
+                        <span class="toggle-arrow">▶</span>
+                        <span>Source Links</span>
+                    </div>
+                    <div class="links-content" id="linksContent">
+                        <div id="linksList"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        class CompanyNewsDashboard {
+            constructor() {
+                this.currentDate = null;
+                this.companyData = null;
+                this.selectedCompany = null;
+                this.allCompanies = [];
+                this.init();
+            }
+
+            async init() {
+                await this.loadAvailableDates();
+                this.setupEventListeners();
+            }
+
+            async loadAvailableDates() {
+                try {
+                    const response = await fetch('/api/available-dates.json');
+                    const dates = await response.json();
+                    
+                    this.availableDates = dates.map(d => d.date);
+                    
+                    const dateInput = document.getElementById('dateSelect');
+                    
+                    if (dates.length > 0) {
+                        const sortedDates = [...dates].sort((a, b) => a.date.localeCompare(b.date));
+                        dateInput.min = sortedDates[0].date;
+                        dateInput.max = sortedDates[sortedDates.length - 1].date;
+                        
+                        dateInput.value = dates[0].date;
+                        await this.loadCompanyData(dates[0].date);
+                    }
+                } catch (error) {
+                    this.showError('Failed to load available dates: ' + error.message);
+                }
+            }
+
+            setupEventListeners() {
+                document.getElementById('dateSelect').addEventListener('change', async (e) => {
+                    const selectedDate = e.target.value;
+                    if (selectedDate) {
+                        if (this.availableDates.includes(selectedDate)) {
+                            await this.loadCompanyData(selectedDate);
+                        } else {
+                            this.showError('No data available for the selected date. Please choose a different date.');
+                        }
+                    } else {
+                        this.showWelcomeScreen();
+                    }
+                });
+
+                document.getElementById('companySearch').addEventListener('input', (e) => {
+                    this.filterCompanies(e.target.value);
+                });
+
+                document.getElementById('linksToggle').addEventListener('click', () => {
+                    this.toggleLinks();
+                });
+            }
+
+            filterCompanies(searchTerm) {
+                const term = searchTerm.toLowerCase();
+                
+                const filteredNewsCompanies = this.allCompanies.newsCompanies.filter(company => 
+                    company.name.toLowerCase().includes(term)
+                );
+                
+                const filteredNoNewsCompanies = this.allCompanies.noNewsCompanies.filter(company => 
+                    company.name.toLowerCase().includes(term)
+                );
+
+                if (filteredNewsCompanies.length > 0) {
+                    document.getElementById('companiesWithNews').style.display = 'block';
+                    this.renderCompanyList('newsCompanyList', filteredNewsCompanies, 'has-news');
+                    document.getElementById('newsCount').textContent = filteredNewsCompanies.length;
+                } else {
+                    document.getElementById('companiesWithNews').style.display = 'none';
+                }
+
+                if (filteredNoNewsCompanies.length > 0) {
+                    document.getElementById('companiesNoNews').style.display = 'block';
+                    this.renderCompanyList('noNewsCompanyList', filteredNoNewsCompanies, 'no-news');
+                    document.getElementById('noNewsCount').textContent = filteredNoNewsCompanies.length;
+                } else {
+                    document.getElementById('companiesNoNews').style.display = 'none';
+                }
+            }
+
+            toggleLinks() {
+                const content = document.getElementById('linksContent');
+                const arrow = document.querySelector('.toggle-arrow');
+                
+                if (content.classList.contains('show')) {
+                    content.classList.remove('show');
+                    arrow.classList.remove('expanded');
+                } else {
+                    content.classList.add('show');
+                    arrow.classList.add('expanded');
+                }
+            }
+
+            async loadCompanyData(date) {
+                this.showLoading();
+                this.currentDate = date;
+
+                try {
+                    const response = await fetch(`/api/company-news-${date}.json`);
+                    
+                    if (!response.ok) {
+                        const errorText = await response.text();
+                        throw new Error(`Failed to load data: ${response.status} - ${errorText}`);
+                    }
+
+                    this.companyData = await response.json();
+                    this.displayCompanies();
+                    this.showWelcomeScreen();
+                } catch (error) {
+                    this.showError('Failed to load company data: ' + error.message);
+                }
+            }
+
+            displayCompanies() {
+                const { companies_with_news, companies_no_news } = this.companyData;
+
+                this.allCompanies = {
+                    newsCompanies: companies_with_news,
+                    noNewsCompanies: companies_no_news
+                };
+
+                const withNewsSection = document.getElementById('companiesWithNews');
+                const noNewsSection = document.getElementById('companiesNoNews');
+
+                if (companies_with_news.length > 0) {
+                    withNewsSection.style.display = 'block';
+                    this.renderCompanyList('newsCompanyList', companies_with_news, 'has-news');
+                    document.getElementById('newsCount').textContent = companies_with_news.length;
+                } else {
+                    withNewsSection.style.display = 'none';
+                }
+
+                if (companies_no_news.length > 0) {
+                    noNewsSection.style.display = 'block';
+                    this.renderCompanyList('noNewsCompanyList', companies_no_news, 'no-news');
+                    document.getElementById('noNewsCount').textContent = companies_no_news.length;
+                } else {
+                    noNewsSection.style.display = 'none';
+                }
+
+                document.getElementById('companySearch').value = '';
+            }
+
+            renderCompanyList(containerId, companies, type) {
+                const container = document.getElementById(containerId);
+                container.innerHTML = '';
+
+                companies.forEach(company => {
+                    const item = document.createElement('div');
+                    item.className = 'company-item';
+                    item.dataset.company = company.name;
+                    item.dataset.type = type;
+
+                    const dot = document.createElement('div');
+                    dot.className = `status-dot ${type === 'has-news' ? 'dot-green' : 'dot-red'}`;
+
+                    const name = document.createElement('div');
+                    name.className = 'company-name';
+                    name.textContent = company.name;
+
+                    item.appendChild(dot);
+                    item.appendChild(name);
+
+                    item.addEventListener('click', () => this.selectCompany(company));
+                    container.appendChild(item);
+                });
+            }
+
+            async selectCompany(company) {
+                document.querySelectorAll('.company-item').forEach(item => {
+                    item.classList.remove('selected');
+                });
+                
+                const selectedItem = document.querySelector(`[data-company="${company.name}"]`);
+                if (selectedItem) {
+                    selectedItem.classList.add('selected');
+                }
+
+                this.selectedCompany = company;
+                await this.displayCompanyDetails(company);
+            }
+
+            async displayCompanyDetails(company) {
+                this.showLoading();
+
+                try {
+                    const safeCompanyName = company.name.replace('/', '_').replace('\\', '_');
+                    const response = await fetch(`/api/company-details-${this.currentDate}-${safeCompanyName}.json`);
+                    
+                    if (!response.ok) {
+                        throw new Error(`Failed to load company details: ${response.statusText}`);
+                    }
+
+                    const details = await response.json();
+                    
+                    document.getElementById('companyTitle').textContent = details.company_name;
+                    document.getElementById('dateBadge').textContent = new Date(this.currentDate).toLocaleDateString('en-US', {
+                        weekday: 'long',
+                        year: 'numeric',
+                        month: 'long',
+                        day: 'numeric'
+                    });
+
+                    const newsContent = document.getElementById('newsContent');
+                    const newsLinks = document.getElementById('newsLinks');
+
+                    if (details.extracted_text && details.extracted_text.trim()) {
+                        const isNoNews = this.isNoSignificantNews(details.extracted_text);
+                        
+                        if (isNoNews) {
+                            newsContent.innerHTML = '<div class="no-news-message">No significant news updates for this company on the selected date.</div>';
+                        } else {
+                            const bulletPoints = this.convertToBulletPoints(details.extracted_text);
+                            newsContent.innerHTML = bulletPoints;
+                        }
+                    } else {
+                        newsContent.innerHTML = '<div class="no-news-message">No news content available for this company.</div>';
+                    }
+
+                    const rawLinks = details.links_raw || '';
+                    
+                    if (rawLinks && rawLinks.trim() && !rawLinks.toLowerCase().includes('no links found')) {
+                        newsLinks.style.display = 'block';
+                        const linksList = document.getElementById('linksList');
+                        linksList.innerHTML = '';
+                        
+                        const urls = this.extractUrls(rawLinks);
+                        if (urls.length > 0) {
+                            urls.forEach((url, index) => {
+                                const linkElement = document.createElement('a');
+                                linkElement.href = url;
+                                linkElement.target = '_blank';
+                                linkElement.rel = 'noopener noreferrer';
+                                linkElement.className = 'news-link';
+                                linkElement.textContent = `${index + 1}. ${url}`;
+                                linksList.appendChild(linkElement);
+                            });
+                        } else {
+                            const noLinksDiv = document.createElement('div');
+                            noLinksDiv.style.color = 'rgba(255,255,255,0.6)';
+                            noLinksDiv.style.fontStyle = 'italic';
+                            noLinksDiv.style.padding = '8px 12px';
+                            noLinksDiv.textContent = 'No clickable links available';
+                            linksList.appendChild(noLinksDiv);
+                        }
+                        
+                        document.getElementById('linksContent').classList.remove('show');
+                        document.querySelector('.toggle-arrow').classList.remove('expanded');
+                    } else {
+                        newsLinks.style.display = 'none';
+                    }
+
+                    this.showNewsDetail();
+                } catch (error) {
+                    this.showError('Failed to load company details: ' + error.message);
+                }
+            }
+
+            convertToBulletPoints(text) {
+                if (!text || typeof text !== 'string') return '';
+                
+                const sentences = text.split(/[.!?]+/).filter(sentence => sentence.trim().length > 0);
+                
+                if (sentences.length === 1) {
+                    return `<ul><li>${sentences[0].trim()}</li></ul>`;
+                }
+                
+                const bulletPoints = sentences.map(sentence => 
+                    `<li>${sentence.trim()}</li>`
+                ).join('');
+                
+                return `<ul>${bulletPoints}</ul>`;
+            }
+
+            extractUrls(text) {
+                const urlPattern = /(https?:\/\/[^\s"',;|\n\]]+)/g;
+                const matches = text.match(urlPattern);
+                return matches ? [...new Set(matches)] : [];
+            }
+
+            isNoSignificantNews(text) {
+                const noNewsPatterns = [
+                    'no significant news',
+                    'no news',
+                    'no updates',
+                    'no recent news',
+                    'no major news',
+                    'nothing significant',
+                    'no developments',
+                    'no announcements'
+                ];
+                
+                const lowerText = text.toLowerCase();
+                return noNewsPatterns.some(pattern => lowerText.includes(pattern));
+            }
+
+            showWelcomeScreen() {
+                document.getElementById('welcomeScreen').style.display = 'flex';
+                document.getElementById('loadingScreen').style.display = 'none';
+                document.getElementById('errorScreen').style.display = 'none';
+                document.getElementById('newsDetail').style.display = 'none';
+            }
+
+            showLoading() {
+                document.getElementById('welcomeScreen').style.display = 'none';
+                document.getElementById('loadingScreen').style.display = 'flex';
+                document.getElementById('errorScreen').style.display = 'none';
+                document.getElementById('newsDetail').style.display = 'none';
+            }
+
+            showError(message) {
+                document.getElementById('errorMessage').textContent = message;
+                document.getElementById('welcomeScreen').style.display = 'none';
+                document.getElementById('loadingScreen').style.display = 'none';
+                document.getElementById('errorScreen').style.display = 'block';
+                document.getElementById('newsDetail').style.display = 'none';
+            }
+
+            showNewsDetail() {
+                document.getElementById('welcomeScreen').style.display = 'none';
+                document.getElementById('loadingScreen').style.display = 'none';
+                document.getElementById('errorScreen').style.display = 'none';
+                document.getElementById('newsDetail').style.display = 'block';
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            new CompanyNewsDashboard();
+        });
+    </script>
+</body>
+</html>
