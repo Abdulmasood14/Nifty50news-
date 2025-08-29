@@ -1,0 +1,61 @@
+[build]
+  # Build command (optional since we're using static files)
+  command = "python build.py"
+  
+  # Directory to publish
+  publish = "."
+  
+  # Functions directory (if needed later)
+  functions = "netlify/functions"
+
+[build.environment]
+  # Python version for build
+  PYTHON_VERSION = "3.9"
+
+# Redirect rules (already have _redirects file, but this is backup)
+[[redirects]]
+  from = "/api/available-dates"
+  to = "/api/available-dates.json"
+  status = 200
+
+[[redirects]]
+  from = "/api/company-news/*"
+  to = "/api/company-news-:splat.json"
+  status = 200
+
+[[redirects]]
+  from = "/api/company-details/*/*"
+  to = "/api/company-details-:splat.json"
+  status = 200
+
+# SPA fallback
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+
+# Security headers
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Frame-Options = "DENY"
+    X-XSS-Protection = "1; mode=block"
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+    Content-Security-Policy = "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' fonts.googleapis.com; font-src 'self' fonts.gstatic.com; connect-src 'self';"
+
+# Cache static assets
+[[headers]]
+  for = "/api/*.json"
+  [headers.values]
+    Cache-Control = "public, max-age=300, s-maxage=300"
+
+[[headers]]
+  for = "*.css"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
+[[headers]]
+  for = "*.js"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
